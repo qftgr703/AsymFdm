@@ -1,1 +1,101 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>QCD Asymptotic Freedom Simulation</title>
+  <style>
+    body { margin: 0; background: #111; color: white; font-family: sans-serif; }
+    canvas { display: block; margin: auto; background: #000; }
+    .controls {
+      text-align: center;
+      margin-top: 10px;
+      color: white;
+    }
+    label { margin: 0 10px; }
+  </style>
+</head>
+<body>
+  <h2 style="text-align:center">QCD Asymptotic Freedom</h2>
+  <canvas id="qcdCanvas" width="900" height="400"></canvas>  <div class="controls">
+    <label>n<sub>f</sub>: <input type="range" id="nf" min="1" max="10" value="3"></label>
+    <label>n<sub>c</sub>: <input type="range" id="nc" min="2" max="10" value="3"></label>
+    <label>Particles: <input type="range" id="nq" min="2" max="10" value="3"></label>
+    <button onclick="pause = !pause">Pause / Resume</button>
+  </div>  <script>
+    const canvas = document.getElementById("qcdCanvas");
+    const ctx = canvas.getContext("2d");
+    let pause = false;
 
+    let quarks = [];
+    const colors = ["red", "green", "blue", "cyan", "magenta", "yellow"];
+
+    function resetQuarks(count) {
+      quarks = [];
+      for (let i = 0; i < count; i++) {
+        quarks.push({
+          x: 100 + i * 100,
+          y: canvas.height / 2 + (Math.random() - 0.5) * 100,
+          vx: (Math.random() - 0.5) * 1.5,
+          vy: (Math.random() - 0.5) * 1.5,
+          color: colors[i % colors.length]
+        });
+      }
+    }
+
+    function draw() {
+      if (!pause) {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const nf = parseFloat(document.getElementById("nf").value);
+        const nc = parseFloat(document.getElementById("nc").value);
+
+        // beta function approximation
+        const beta = -(11/3)*nc + (2/3)*nf;
+
+        for (let i = 0; i < quarks.length; i++) {
+          const q = quarks[i];
+
+          q.x += q.vx;
+          q.y += q.vy;
+
+          if (q.x < 0 || q.x > canvas.width) q.vx *= -1;
+          if (q.y < 0 || q.y > canvas.height) q.vy *= -1;
+
+          ctx.beginPath();
+          ctx.fillStyle = q.color;
+          ctx.arc(q.x, q.y, 8, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+
+        for (let i = 0; i < quarks.length; i++) {
+          for (let j = i + 1; j < quarks.length; j++) {
+            const qi = quarks[i], qj = quarks[j];
+            const dx = qi.x - qj.x;
+            const dy = qi.y - qj.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            const avgX = (qi.x + qj.x) / 2;
+            const energyScale = avgX / canvas.width;
+            let coupling = 1.2 - energyScale - beta * 0.01;
+            coupling = Math.max(0.05, Math.min(coupling, 1));
+
+            ctx.beginPath();
+            ctx.moveTo(qi.x, qi.y);
+            ctx.lineTo(qj.x, qj.y);
+            ctx.strokeStyle = `rgba(255,255,255,${coupling})`;
+            ctx.lineWidth = 2 * coupling;
+            ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(draw);
+    }
+
+    document.getElementById("nq").addEventListener("input", e => {
+      resetQuarks(parseInt(e.target.value));
+    });
+
+    resetQuarks(3);
+    draw();
+  </script></body>
+</html>
